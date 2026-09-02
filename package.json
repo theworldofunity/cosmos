@@ -1,6 +1,6 @@
 {
   "name": "@theworldofunity/cosmos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Western Astrology + Human Design + Gene Keys from a birthdate \u2014 real BodyGraph mechanics, fully in-browser or Node, no paid API, MIT licensed.",
   "type": "module",
   "main": "dist/index.js",

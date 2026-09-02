@@ -81,6 +81,8 @@ export interface PlanetPosition {
   longitude: number;
   sign: string;
   degree: number;
+  /** True when the body appears to move backwards from Earth. */
+  retrograde: boolean;
 }
 
 export interface AstrologyResult {
@@ -148,9 +150,27 @@ export interface CosmosChart {
   geneKeys: GeneKeysResult;
 }
 
+export type TimeFrame = "local" | "utc";
+
 export interface ComputeChartOptions {
   /** Birth date (local calendar date). */
   date: Date;
+  /**
+   * How to read `date` and `time`.
+   *
+   * "local" (default) treats them as WALL-CLOCK TIME AT `lat`/`lng` — what a
+   * birth certificate gives you.
+   *
+   * "utc" treats `date` as a real instant and reads its UTC components, which
+   * is what you want for transits or any "right now" chart. Planetary
+   * longitudes are geocentric, so `lat`/`lng` then only affect houses and the
+   * ascendant.
+   *
+   * Getting this wrong is not a rounding error. Verified 2026-09-02: feeding
+   * local components while claiming UTC put the Moon 4.6 degrees out — a whole
+   * void-of-course window.
+   */
+  frame?: TimeFrame;
   /** Birth time as "HH:MM" 24 h string, e.g. "14:35". Defaults to "12:00". */
   time?: string;
   /** Birth latitude in decimal degrees (north positive). */
@@ -229,23 +249,37 @@ function pointLon(h: HoroscopeInstance, key: string): number {
   return entry.ChartPosition.Ecliptic.DecimalDegrees;
 }
 
+function isRetrograde(h: HoroscopeInstance, key: string): boolean {
+  const bodies = h.CelestialBodies as unknown as Record<string, { isRetrograde?: boolean }>;
+  return Boolean(bodies[key]?.isRetrograde);
+}
+
 function makePlanet(h: HoroscopeInstance, key: string, label: string): PlanetPosition {
   const lon = bodyLon(h, key);
-  return { name: label, longitude: lon, sign: lonToSign(lon), degree: lonToDegInSign(lon) };
+  return {
+    name: label,
+    longitude: lon,
+    sign: lonToSign(lon),
+    degree: lonToDegInSign(lon),
+    retrograde: isRetrograde(h, key),
+  };
 }
 
 // ─── Horoscope factory ────────────────────────────────────────────────────────
 
-function buildHoroscope(date: Date, time: string, lat: number, lng: number): HoroscopeInstance {
+function buildHoroscope(
+  date: Date, time: string, lat: number, lng: number, frame: TimeFrame = "local",
+): HoroscopeInstance {
+  const utc = frame === "utc";
   const [hour, minute] = time.split(":").map(Number);
   const origin = new Origin({
-    year: date.getFullYear(),
-    month: date.getMonth(),   // 0-indexed (library expects 0-based month)
-    date: date.getDate(),
-    hour,
-    minute,
-    latitude: lat,
-    longitude: lng,
+    year:  utc ? date.getUTCFullYear() : date.getFullYear(),
+    month: utc ? date.getUTCMonth() : date.getMonth(),   // 0-indexed
+    date:  utc ? date.getUTCDate() : date.getDate(),
+    hour:  utc ? date.getUTCHours() : hour,
+    minute: utc ? date.getUTCMinutes() : minute,
+    latitude:  utc ? 0 : lat,
+    longitude: utc ? 0 : lng,
   });
   return new Horoscope({
     origin,
@@ -294,10 +328,10 @@ function designDate(birthDate: Date): Date {
  * ```
  */
 export function computeChart(options: ComputeChartOptions): CosmosChart {
-  const { date, time = "12:00", lat, lng } = options;
+  const { date, time = "12:00", lat, lng, frame = "local" } = options;
 
   // ── Personality (birth) horoscope ─────────────────────────────────────────
-  const p = buildHoroscope(date, time, lat, lng);
+  const p = buildHoroscope(date, time, lat, lng, frame);
 
   const PLANET_KEYS: Array<[string, string]> = [
     ["sun",     "Sun"],
@@ -335,7 +369,7 @@ export function computeChart(options: ComputeChartOptions): CosmosChart {
 
   // ── Design (88° solar arc prior) horoscope ────────────────────────────────
   const dDate = designDate(date);
-  const d = buildHoroscope(dDate, time, lat, lng);
+  const d = buildHoroscope(dDate, time, lat, lng, frame);
 
   // ── Gate mappings ─────────────────────────────────────────────────────────
   const pGates: GateSet = {

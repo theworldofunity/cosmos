@@ -152,3 +152,39 @@ eq(halfChannel.activeGates.length, 1, "the gate is still reported as active");
 console.log("Half-channel handling: PASS");
 
 console.log(`\nAll BodyGraph tests PASSED (${checks} assertions).`);
+
+// ── Time frame: the bug that cost 4.6 degrees ────────────────────────────────
+// Origin reads its components as wall-clock time AT THE GIVEN PLACE. Passing a
+// real instant's LOCAL components while treating the result as UTC shifts the
+// chart by the machine's timezone offset — the Moon moves 0.55 deg/hour, so an
+// 8-hour machine puts it 4.4 deg out. frame:"utc" removes the ambiguity, and
+// because it forces lat/lng to 0 the PLANET longitudes must then be identical
+// no matter what place is passed.
+
+import { computeChart } from "../dist/index.js";
+
+const instant = new Date("1990-06-15T14:30:00Z");
+const bali  = computeChart({ date: instant, lat: -8.4095, lng: 115.1889, frame: "utc" });
+const quito = computeChart({ date: instant, lat: -0.1807, lng: -78.4678, frame: "utc" });
+
+for (let i = 0; i < bali.astrology.planets.length; i++) {
+  const a = bali.astrology.planets[i];
+  const b = quito.astrology.planets[i];
+  eq(a.name, b.name, "planet order is stable");
+  ok(
+    Math.abs(a.longitude - b.longitude) < 1e-9,
+    `${a.name} must be identical under frame:"utc" regardless of place: ${a.longitude} vs ${b.longitude}`,
+  );
+}
+
+// Every planet reports retrograde as a real boolean.
+for (const p of bali.astrology.planets) {
+  ok(typeof p.retrograde === "boolean", `${p.name} reports retrograde as a boolean`);
+}
+
+// The Sun is never retrograde; the Moon is never retrograde.
+eq(bali.astrology.planets.find((p) => p.name === "Sun").retrograde, false, "the Sun never retrogrades");
+eq(bali.astrology.planets.find((p) => p.name === "Moon").retrograde, false, "the Moon never retrogrades");
+
+console.log("Time frame + retrograde: PASS");
+console.log(`\nGrand total: ${checks} assertions.`);
