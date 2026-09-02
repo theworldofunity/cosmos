@@ -1,0 +1,52 @@
+{
+  "name": "@theworldofunity/cosmos",
+  "version": "0.1.0",
+  "description": "Western Astrology + Human Design + Gene Keys from a birthdate \u2014 real BodyGraph mechanics, fully in-browser or Node, no paid API, MIT licensed.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node test/basic.test.mjs && node test/human-design.test.mjs",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "astrology",
+    "human-design",
+    "gene-keys",
+    "horoscope",
+    "natal-chart",
+    "birth-chart",
+    "ephemeris"
+  ],
+  "author": "The World of Unity <george@theworldofunity.org>",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "circular-natal-horoscope-js": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "typescript": "^5.4.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theworldofunity/cosmos.git"
+  },
+  "homepage": "https://theworldofunity.org",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  }
+}
