@@ -42,6 +42,7 @@ import circularNatalHoroscope from "circular-natal-horoscope-js";
 import { buildBodyGraph } from "./humanDesign.js";
 import type { HDType, HDAuthority, HDDefinition, Center } from "./humanDesign.js";
 export * from "./humanDesign.js";
+export * from "./synastry.js";
 
 const { Origin, Horoscope } = circularNatalHoroscope as unknown as {
   Origin: OriginCtor;
